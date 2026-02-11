@@ -201,31 +201,43 @@ class DjangoApiService {
     }
   }
 
-  // Take attendance with token (Student)
-  Future<bool> takeAttendance({
+  // Take attendance with token and location (Student)
+  Future<Map<String, dynamic>> takeAttendance({
     required BuildContext context,
     required String token,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       http.Response res = await http.post(
         Uri.parse('$uri/api/courses/take_attendance/'),
-        body: jsonEncode({'token': token}),
+        body: jsonEncode({
+          'token': token,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+        }),
         headers: await _getHeaders(),
       );
 
-      httpErrorHandle(
-        response: res,
-        context: context,
-        onSuccess: () {
-          showSnackBar(context, 'Attendance recorded successfully!');
-        },
-      );
+      if (res.statusCode == 200) {
+        showSnackBar(context, 'Attendance recorded successfully!');
+      } else {
+        // Parse error message for geofencing violations
+        var errorData = jsonDecode(res.body);
+        if (errorData['error'] != null && 
+            errorData['error'].toString().contains('outside the allowed radius')) {
+          showSnackBar(context, errorData['error']);
+        }
+      }
 
-      return res.statusCode == 200;
+      return {
+        'success': res.statusCode == 200,
+        'response': jsonDecode(res.body),
+      };
     } catch (e) {
       print(e.toString());
       showSnackBar(context, e.toString());
-      return false;
+      return {'success': false, 'error': e.toString()};
     }
   }
 
