@@ -1,0 +1,28 @@
+workflows:
+  android-workflow:
+    name: Android Build
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      flutter: stable
+      xcode: latest
+      java: temurin17
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    dependencies:
+      - brew:
+          - cocoapods
+    scripts:
+      - name: Get Flutter dependencies
+        script: |
+          flutter pub get
+          flutter precache --android
+      - name: Build Android APK
+        script: |
+          flutter build apk --debug
+    artifacts:
+      - build/app/outputs/flutter-apk/app-debug.apk
